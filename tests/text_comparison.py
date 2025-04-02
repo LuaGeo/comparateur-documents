@@ -1,7 +1,11 @@
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from text_extract import docx_to_text, pdf_to_text
+import os
+import sys
+# Ajoute le chemin racine du projet
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 
 # doc1 = extract_text_from_docx(".\docs\docx\exemple1.docx")
 # doc2 = extract_text_from_docx(".\docs\docx\exemple1_diff.docx")

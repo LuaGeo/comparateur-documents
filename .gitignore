@@ -1,6 +1,6 @@
 # Environnements
 venv/
-.env/
+.env
 
 # Fichiers générés
 *.pyc

@@ -8,6 +8,13 @@ pdf2image>=1.16.3
 python-docx>=0.8.11
 Levenshtein>=0.20.9
 scikit-learn>=1.2.2
+python-Levenshtein
+
+# Pour les fichiers DOCX
+python-docx>=0.8.11
+
+# Pour les fichiers PDF
+PyPDF2>=3.0.0
 
 ### Dev
 pytest>=7.2
@@ -18,3 +25,5 @@ jupyter>=1.0.0
 ### Optionnel (pour EasyOCR)
 easyocr>=1.6.2
 torch>=2.0.1  # Note: Vérifier la compatibilité avec Python 3.13
+
+# python-Levenshtein>=0.25.0
