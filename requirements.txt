@@ -1,0 +1,20 @@
+### Configuration Python requise
+### => Utiliser Python 3.13.2 ou supérieur (géré séparément via pyenv/brew)
+
+### Core
+opencv-python-headless>=4.7
+pytesseract>=0.3.10
+pdf2image>=1.16.3
+python-docx>=0.8.11
+Levenshtein>=0.20.9
+scikit-learn>=1.2.2
+
+### Dev
+pytest>=7.2
+black>=23.3
+flake8>=6.0
+jupyter>=1.0.0
+
+### Optionnel (pour EasyOCR)
+easyocr>=1.6.2
+torch>=2.0.1  # Note: Vérifier la compatibilité avec Python 3.13

@@ -1,0 +1,16 @@
+# Environnements
+venv/
+.env/
+
+# Fichiers générés
+*.pyc
+__pycache__/
+*.DS_Store
+
+# Fichiers temporaires
+temp/
+*.tmp
+
+# Fichiers sensibles
+secrets.ini
+*.key
