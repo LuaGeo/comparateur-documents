@@ -27,21 +27,3 @@ from src.main import compare_documents
 result = compare_documents("doc1.pdf", "doc2.docx")
 print(result)
 ```
-
-## Structure
-
-```
-/expliquer structure ici/
-```
-
-## Contribuer
-
-1. Forkez le projet
-2. Créez une branche (`git checkout -b feature/amelioration`)
-3. Committez (`git commit -m 'Ajout feature'`)
-4. Pushez (`git push origin feature/amelioration`)
-5. Créez une Pull Request
-
-```
-
-```
