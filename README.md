@@ -11,7 +11,7 @@ Outil pour comparer des documents (textes, PDF, images) avec IA
 ## Installation
 
 ```bash
-git clone https://github.com/votreuser/comparateur-documents.git
+git clone https://github.com/LuaGeo/comparateur-documents.git
 cd comparateur-documents
 
 # Installation des dépendances
