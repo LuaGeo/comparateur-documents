@@ -7,7 +7,7 @@ import os
 import sys
 
 # Configuration du chemin Tesseract (à adapter)
-pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'  # Mac/Linux
+pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
 # pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
 
 # Ajout du chemin racine
@@ -57,6 +57,9 @@ def compare_documents(doc1_path, doc2_path, is_image=False):
     if not text1 or not text2:
         raise ValueError("Un des documents n'a pas pu être lu")
     
+    print(text2)
+
+    
     # Calcul de similarité
     lev_distance = distance(text1, text2)
     max_len = max(len(text1), len(text2))
@@ -74,7 +77,7 @@ if __name__ == "__main__":
     # Pour les images scannées
     result = compare_documents(
         "./docs/examples/img/exemple1_scanned.jpg",
-        "./docs/examples/img/exemple1_diff_scanned.jpg",
+        "./docs/examples/img/exemple_diff_manuscrit.jpg",
         is_image=True
     )
     
