@@ -7,8 +7,8 @@ import os
 import sys
 
 # Configuration du chemin Tesseract (à adapter)
-pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
+# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
 
 # Ajout du chemin racine
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # Pour les images scannées
     result = compare_documents(
         "./docs/examples/img/exemple1_scanned.jpg",
-        "./docs/examples/img/exemple_diff_manuscrit.jpg",
+        "./docs/examples/img/exemple_diff_scanned.jpg",
         is_image=True
     )
     

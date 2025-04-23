@@ -4,6 +4,10 @@ import cv2
 import numpy as np
 from PIL import Image
 
+# Chemin pour ne pas avoir besoin de toucher le PATH dans les variables d'environnement du système (pas de permission admin)
+pytesseract.pytesseract.tesseract_cmd = r"C:\Users\DEOLIVEIRALuana\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"
+
+
 # OCR: optical character recognition
 
 
@@ -25,7 +29,7 @@ def preprocess_image(image_path):
     return edges
 
 # Utilisation
-image_path = r".\docs\scanned\exemple1_scanned_jpg.jpg"
+image_path = r".\docs\examples\img\exemple1_scanned.jpg"
 processed_img = preprocess_image(image_path)
 # Image.fromarray(processed_img).save("processed.jpg")
 
@@ -44,7 +48,7 @@ def image_to_text(processed_img):
     )
     return text
 
-image_path = r".\docs\scanned\exemple1_scanned_jpg.jpg"
+image_path = r".\docs\examples\img\exemple1_scanned.jpg"
 extracted_text = image_to_text(processed_img)
 print("Texte extrait :")
 print(extracted_text)
