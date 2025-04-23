@@ -8,7 +8,8 @@ pdf2image>=1.16.3
 python-docx>=0.8.11
 Levenshtein>=0.27.1
 scikit-learn>=1.2.2
-python-Levenshtein
+python-Levenshtein>=0.27.1
+streamlit>=1.33.0
 
 # Pour les fichiers DOCX
 python-docx>=1.1.2
