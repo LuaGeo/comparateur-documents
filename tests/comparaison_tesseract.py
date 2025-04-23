@@ -7,8 +7,8 @@ import os
 import sys
 
 # Configuration du chemin Tesseract (à adapter)
-pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
+# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
+pytesseract.pytesseract.tesseract_cmd = r'C:\Users\DEOLIVEIRALuana\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'  # Windows
 
 # Ajout du chemin racine
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
