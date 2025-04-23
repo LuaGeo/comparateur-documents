@@ -7,8 +7,8 @@ import os
 import sys
 
 # Configuration du chemin Tesseract (à adapter)
-# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
+pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows
 
 # Ajout du chemin racine
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -28,8 +28,10 @@ def preprocess_image_for_ocr(image_path):
 def extract_text_with_tesseract(image_path):
     """Extrait le texte avec Tesseract OCR"""
     try:
+        print(f"Tentative d'extraction du texte de: {image_path}")
         # Prétraitement
         processed_img = preprocess_image_for_ocr(image_path)
+        print("Image prétraitée avec succès")
         
         # Configuration OCR optimisée
         custom_config = r'--oem 3 --psm 6 -l fra+eng'
@@ -39,6 +41,7 @@ def extract_text_with_tesseract(image_path):
             Image.fromarray(processed_img), 
             config=custom_config
         )
+        print(f"Texte extrait (longueur: {len(text)})")
         return text.strip()
     except Exception as e:
         print(f"Erreur OCR sur {image_path}: {str(e)}")
@@ -46,6 +49,7 @@ def extract_text_with_tesseract(image_path):
 
 def compare_documents(doc1_path, doc2_path, is_image=False):
     """Compare deux documents (PDF ou images)"""
+    print(f"Comparaison des documents: {doc1_path} et {doc2_path}")
     if is_image:
         text1 = extract_text_with_tesseract(doc1_path)
         text2 = extract_text_with_tesseract(doc2_path)
@@ -54,8 +58,11 @@ def compare_documents(doc1_path, doc2_path, is_image=False):
         text1 = pdf_to_text(doc1_path)
         text2 = pdf_to_text(doc2_path)
     
+    print(f"Texte 1 (longueur): {len(text1)}")
+    print(f"Texte 2 (longueur): {len(text2)}")
+    
     if not text1 or not text2:
-        raise ValueError("Un des documents n'a pas pu être lu")
+        raise ValueError(f"Un des documents n'a pas pu être lu. Texte1 vide: {not text1}, Texte2 vide: {not text2}")
     
     print(text2)
 
@@ -77,7 +84,7 @@ if __name__ == "__main__":
     # Pour les images scannées
     result = compare_documents(
         "./docs/examples/img/exemple1_scanned.jpg",
-        "./docs/examples/img/exemple_diff_scanned.jpg",
+        "./docs/examples/img/exemple1_diff_scanned.jpg",
         is_image=True
     )
     
