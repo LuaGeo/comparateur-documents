@@ -5,10 +5,42 @@ import numpy as np
 from Levenshtein import distance
 import os
 import sys
+import platform
 
-# Configuration du chemin Tesseract (à adapter)
-# pytesseract.pytesseract.tesseract_cmd = '/usr/local/bin/tesseract'  # Mac/Linux
-pytesseract.pytesseract.tesseract_cmd = r'C:\Users\DEOLIVEIRALuana\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'  # Windows
+def configure_tesseract_path():
+    """Configure le chemin de Tesseract en fonction du système d'exploitation"""
+    system = platform.system()
+    
+    # Chemins possibles pour Windows
+    windows_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Users\DEOLIVEIRALuana\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+    ]
+    
+    # Chemins possíveis pour Mac/Linux
+    unix_paths = [
+        '/usr/local/bin/tesseract',
+        '/usr/bin/tesseract',
+        '/opt/homebrew/bin/tesseract'  # Pour Mac avec Homebrew
+    ]
+    
+    if system == 'Windows':
+        for path in windows_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                print(f"Tesseract trouvé à: {path}")
+                return
+    else:  # Mac ou Linux
+        for path in unix_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                print(f"Tesseract trouvé à: {path}")
+                return
+    
+    raise EnvironmentError("Tesseract non trouvé. Veuillez l'installer et vérifier les chemins.")
+
+# Configuration du chemin Tesseract
+configure_tesseract_path()
 
 # Ajout du chemin racine
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -55,17 +87,25 @@ def compare_documents(doc1_path, doc2_path, is_image=False):
         text2 = extract_text_with_tesseract(doc2_path)
     else:
         from src.preprocessing.text_extract import pdf_to_text
-        text1 = pdf_to_text(doc1_path)
-        text2 = pdf_to_text(doc2_path)
+        # Extrair texto de todas as páginas
+        text1 = ""
+        text2 = ""
+        
+        # Processar todas as páginas do primeiro documento
+        pages1 = pdf_to_text(doc1_path, all_pages=True)
+        for page in pages1:
+            text1 += page + "\n"
+        
+        # Processar todas as páginas do segundo documento
+        pages2 = pdf_to_text(doc2_path, all_pages=True)
+        for page in pages2:
+            text2 += page + "\n"
     
     print(f"Texte 1 (longueur): {len(text1)}")
     print(f"Texte 2 (longueur): {len(text2)}")
     
     if not text1 or not text2:
         raise ValueError(f"Un des documents n'a pas pu être lu. Texte1 vide: {not text1}, Texte2 vide: {not text2}")
-    
-    print(text2)
-
     
     # Calcul de similarité
     lev_distance = distance(text1, text2)
