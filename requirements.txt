@@ -29,7 +29,7 @@ torch>=2.0.1  # Note: Vérifier la compatibilité avec Python 3.13
 
 # python-Levenshtein>=0.25.0
 
-streamlit==1.32.0
+streamlit==1.37.0
 pytesseract==0.3.10
 opencv-python==4.9.0.80
 Pillow==10.2.0
