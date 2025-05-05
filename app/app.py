@@ -5,10 +5,9 @@ from pathlib import Path
 from PIL import Image
 import io
 
-# Adicionar o diretório raiz ao path para importar os módulos
+# Ajoutez le répertoire racine au chemin d'accès pour importer les modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tests.comparaison_tesseract import compare_documents
 from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
 
@@ -36,37 +35,72 @@ def extract_text_from_file(file_path, file_type):
     try:
         print(f"Tentative d'extraction du texte de: {file_path}")
         if file_type in ['.jpg', '.jpeg', '.png']:
-            return image_to_text(file_path)
+            text = image_to_text(file_path)
+            print(f"Texte extrait de l'image (longueur: {len(text)}): {text[:100]}...")
+            return text
         elif file_type == '.pdf':
-            return pdf_to_text(file_path)
+            # Tenter d'abord d'extraire le texte directement
+            text = pdf_to_text(file_path)
+            print(f"Texte extrait du PDF (longueur: {len(text)}): {text[:100]}...")
+            
+            # Si le texte est vide ou très court, c'est probablement un PDF scanné
+            if not text.strip() or len(text.strip()) < 50:
+                print("PDF probablement scanné, conversion en images...")
+                from src.preprocessing.pdf_to_image import pdf_to_images
+                
+                # Convertir le PDF en images
+                image_paths = pdf_to_images(file_path)
+                if not image_paths:
+                    raise ValueError("Impossible de convertir le PDF en images")
+                
+                # Extraire le texte de chaque page
+                all_text = []
+                for img_path in image_paths:
+                    print(f"Traitement de l'image: {img_path}")
+                    page_text = image_to_text(img_path)
+                    print(f"Texte extrait de la page (longueur: {len(page_text)}): {page_text[:100]}...")
+                    if page_text:
+                        all_text.append(page_text)
+                
+                # Nettoyer les fichiers temporaires
+                for img_path in image_paths:
+                    if os.path.exists(img_path):
+                        os.remove(img_path)
+                
+                final_text = "\n".join(all_text)
+                print(f"Texte final du PDF scanné (longueur: {len(final_text)}): {final_text[:100]}...")
+                return final_text
+            return text
         elif file_type == '.docx':
-            return docx_to_text(file_path)
+            text = docx_to_text(file_path)
+            print(f"Texte extrait du DOCX (longueur: {len(text)}): {text[:100]}...")
+            return text
         else:
             raise ValueError(f"Type de fichier non supporté: {file_type}")
     except Exception as e:
         print(f"Erreur lors de l'extraction du texte: {str(e)}")
         return ""
 
-# Sidebar para upload de arquivos
+# Barre latérale pour télécharger des fichiers
 with st.sidebar:
     st.header("Upload des Documents")
     
-    # Upload do primeiro documento
+    # Téléchargement du premier document
     doc1 = st.file_uploader("Document 1", type=['jpg', 'jpeg', 'png', 'pdf', 'docx'])
     
-    # Upload do segundo documento
+    # Téléchargement du deuxième document
     doc2 = st.file_uploader("Document 2", type=['jpg', 'jpeg', 'png', 'pdf', 'docx'])
     
-    # Botão para iniciar a comparação
+    # Bouton pour lancer la comparaison
     compare_button = st.button("Comparer les Documents")
 
-# Área principal para resultados
+# Champ principal pour les résultats
 if doc1 and doc2 and compare_button:
-    # Criar diretório temporário se não existir
+    # Créer un répertoire temporaire si ce n'est pas déjà fait
     temp_dir = Path("temp")
     temp_dir.mkdir(exist_ok=True)
     
-    # Salvar os arquivos temporariamente
+    # Enregistrer les fichiers temporairement
     doc1_path = temp_dir / doc1.name
     doc2_path = temp_dir / doc2.name
     
@@ -76,20 +110,24 @@ if doc1 and doc2 and compare_button:
         f.write(doc2.getbuffer())
     
     try:
-        # Extrair texto dos documentos
+        # Extraire le texte des documents
         file_type1 = Path(doc1.name).suffix.lower()
         file_type2 = Path(doc2.name).suffix.lower()
         
-        print(f"Traitement du document 1: {doc1_path}")
+        print(f"Traitement du document 1: {doc1_path} (type: {file_type1})")
         text1 = extract_text_from_file(str(doc1_path), file_type1)
+        print(f"Texte extrait du document 1 (longueur: {len(text1)}): {text1[:100]}...")
         
-        print(f"Traitement du document 2: {doc2_path}")
+        print(f"Traitement du document 2: {doc2_path} (type: {file_type2})")
         text2 = extract_text_from_file(str(doc2_path), file_type2)
+        print(f"Texte extrait du document 2 (longueur: {len(text2)}): {text2[:100]}...")
         
-        if not text1 or not text2:
-            raise ValueError("Un des documents n'a pas pu être lu")
+        if not text1:
+            raise ValueError(f"Le document 1 n'a pas pu être lu (type: {file_type1})")
+        if not text2:
+            raise ValueError(f"Le document 2 n'a pas pu être lu (type: {file_type2})")
         
-        # Calcular métricas de comparação
+        # Calculer les métriques de comparaison
         from Levenshtein import distance
         lev_distance = distance(text1, text2)
         max_len = max(len(text1), len(text2))
@@ -102,10 +140,10 @@ if doc1 and doc2 and compare_button:
             'text2_length': len(text2)
         }
         
-        # Exibir resultados
+        # Afficher les résultats
         st.header("Résultats de la Comparaison")
         
-        # Configurar o layout para melhor visualização em retrato
+        # Configurer le layout pour une meilleure visualisation en portrait
         col1, col2 = st.columns(2)
         
         with col1:
@@ -126,7 +164,7 @@ if doc1 and doc2 and compare_button:
             else:
                 st.write(f"Type de fichier: {file_type2}")
         
-        # Métricas de comparação em um container separado
+        # Métriques de comparaison dans un conteneur séparé
         with st.container():
             st.subheader("Métriques de Comparaison")
             col_metrics1, col_metrics2 = st.columns(2)
@@ -139,7 +177,7 @@ if doc1 and doc2 and compare_button:
                 st.metric("Longueur Document 1", f"{result['text1_length']} caractères")
                 st.metric("Longueur Document 2", f"{result['text2_length']} caractères")
         
-        # Exibir os textos extraídos
+        # Afficher les textes extraits
         with st.expander("Voir les textes extraits"):
             col_text1, col_text2 = st.columns(2)
             with col_text1:
@@ -153,7 +191,7 @@ if doc1 and doc2 and compare_button:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
     
     finally:
-        # Limpar arquivos temporários
+        # Nettoyer les fichiers temporaires
         if doc1_path.exists():
             doc1_path.unlink()
         if doc2_path.exists():
