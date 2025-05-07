@@ -17,7 +17,7 @@ def configure_tesseract_path():
         r'C:\Users\DEOLIVEIRALuana\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
     ]
     
-    # Chemins possíveis pour Mac/Linux
+    # Chemins possibles pour Mac/Linux
     unix_paths = [
         '/usr/local/bin/tesseract',
         '/usr/bin/tesseract',
