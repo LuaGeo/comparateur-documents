@@ -8,6 +8,15 @@ from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
 from src.preprocessing.pdf_to_image import pdf_to_images
 
+from difflib import HtmlDiff
+
+def generate_diff_html(text1: str, text2: str) -> str:
+    lines1 = text1.splitlines()
+    lines2 = text2.splitlines()
+    diff = HtmlDiff().make_table(lines1, lines2, fromdesc="Document 1", todesc="Document 2")
+    return diff
+
+
 def rotate_image_to_portrait(image):
     """Rotate image to portrait orientation if needed"""
     width, height = image.size

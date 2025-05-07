@@ -13,6 +13,7 @@ from src.preprocessing.document_utils import (
     rotate_image_to_portrait,
     display_pdf,
     convert_docx_to_pdf,
+    generate_diff_html
 )
 
 st.set_page_config(
@@ -131,7 +132,10 @@ if doc1 and doc2 and compare_button:
             with col_metrics2:
                 st.metric("Longueur Document 1", f"{result['text1_length']} caractères")
                 st.metric("Longueur Document 2", f"{result['text2_length']} caractères")
-        
+            
+            with st.expander("🧠 Différences détaillées"):
+                diff_html = generate_diff_html(text1, text2)
+                st.markdown(diff_html, unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
@@ -143,5 +147,8 @@ if doc1 and doc2 and compare_button:
         if doc2_path.exists():
             doc2_path.unlink()
 
+
+
 elif compare_button and (not doc1 or not doc2):
     st.warning("Veuillez uploader les deux documents avant de lancer la comparaison.") 
+
