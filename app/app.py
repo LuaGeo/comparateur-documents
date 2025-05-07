@@ -151,7 +151,7 @@ if doc1 and doc2 and compare_button:
             if file_type1 in ['.jpg', '.jpeg', '.png']:
                 img1 = Image.open(io.BytesIO(doc1.getvalue()))
                 img1 = rotate_image_to_portrait(img1)
-                st.image(img1, use_column_width=True)
+                st.image(img1, use_container_width=True)
             else:
                 st.write(f"Type de fichier: {file_type1}")
         
@@ -160,7 +160,7 @@ if doc1 and doc2 and compare_button:
             if file_type2 in ['.jpg', '.jpeg', '.png']:
                 img2 = Image.open(io.BytesIO(doc2.getvalue()))
                 img2 = rotate_image_to_portrait(img2)
-                st.image(img2, use_column_width=True)
+                st.image(img2, use_container_width=True)
             else:
                 st.write(f"Type de fichier: {file_type2}")
         
