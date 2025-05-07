@@ -87,16 +87,16 @@ def compare_documents(doc1_path, doc2_path, is_image=False):
         text2 = extract_text_with_tesseract(doc2_path)
     else:
         from src.preprocessing.text_extract import pdf_to_text
-        # Extrair texto de todas as páginas
+        # Extraire le texte de toutes les pages
         text1 = ""
         text2 = ""
         
-        # Processar todas as páginas do primeiro documento
+        # Processer toutes les pages du premier document
         pages1 = pdf_to_text(doc1_path, all_pages=True)
         for page in pages1:
             text1 += page + "\n"
         
-        # Processar todas as páginas do segundo documento
+        # Processer toutes les pages du deuxième document
         pages2 = pdf_to_text(doc2_path, all_pages=True)
         for page in pages2:
             text2 += page + "\n"

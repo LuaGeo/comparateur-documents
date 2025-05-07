@@ -52,17 +52,14 @@ def preprocess_image(image_path):
         # Convertir en niveaux de gris
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-        # Dénosage
-        denoised = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
-        
-        # Amélioration du contraste
+        # Ajustement simple du contraste
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        enhanced = clahe.apply(denoised)
+        enhanced = clahe.apply(gray)
         
-        # Binarisation
-        _, thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Binarisation simple
+        _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
-        return thresh
+        return binary
     except Exception as e:
         print(f"Erreur lors du prétraitement de l'image: {str(e)}")
         raise
@@ -80,15 +77,16 @@ def image_to_text(image_path):
         processed_img = preprocess_image(image_path)
         print("Image prétraitée avec succès")
         
-        # Configuration Tesseract
-        custom_config = r'--oem 3 --psm 6 -l fra+eng'
+        # Configuration Tesseract optimisée pour texte clair
+        custom_config = '--oem 3 --psm 6 -l fra+eng --dpi 300'
         
         # OCR
         text = pytesseract.image_to_string(
             Image.fromarray(processed_img), 
             config=custom_config
         )
-        print(f"Texte extrait (longueur: {len(text)})")
+        
+        print(f"Texte extrait (longueur: {len(text)}): {text[:100]}...")
         return text.strip()
     except Exception as e:
         print(f"Erreur lors de l'extraction du texte: {str(e)}")
