@@ -1,19 +1,19 @@
 import streamlit as st
 import sys
-import os
 from pathlib import Path
 from PIL import Image
 import io
-import base64
-import pypandoc
-
 
 
 # Ajoutez le répertoire racine au chemin d'accès pour importer les modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.preprocessing.text_extract import docx_to_text, pdf_to_text
-from src.preprocessing.scan_text_extract import image_to_text
+from src.preprocessing.document_utils import (
+    extract_text_from_file,
+    rotate_image_to_portrait,
+    display_pdf,
+    convert_docx_to_pdf,
+)
 
 st.set_page_config(
     page_title="Comparateur de Documents",
@@ -26,79 +26,6 @@ st.title("Comparateur de Documents 📄")
 st.markdown("""
 Cette application permet de comparer deux documents (images, PDF ou DOCX) et d'analyser leurs différences.
 """)
-
-def rotate_image_to_portrait(image):
-    """Rotate image to portrait orientation if needed"""
-    width, height = image.size
-    if width > height:
-        return image.rotate(270, expand=True)
-    return image
-
-def extract_text_from_file(file_path, file_type):
-    """Extrait le texte d'un fichier selon son type"""
-    try:
-        print(f"Tentative d'extraction du texte de: {file_path}")
-        if file_type in ['.jpg', '.jpeg', '.png']:
-            text = image_to_text(file_path)
-            print(f"Texte extrait de l'image (longueur: {len(text)}): {text[:100]}...")
-            return text
-        elif file_type == '.pdf':
-            # Tenter d'abord d'extraire le texte directement
-            text = pdf_to_text(file_path)
-            print(f"Texte extrait du PDF (longueur: {len(text)}): {text[:100]}...")
-            
-            # Si le texte est vide ou très court, c'est probablement un PDF scanné
-            if not text.strip() or len(text.strip()) < 50:
-                print("PDF probablement scanné, conversion en images...")
-                from src.preprocessing.pdf_to_image import pdf_to_images
-                
-                # Convertir le PDF en images
-                image_paths = pdf_to_images(file_path)
-                if not image_paths:
-                    raise ValueError("Impossible de convertir le PDF en images")
-                
-                # Extraire le texte de chaque page
-                all_text = []
-                for img_path in image_paths:
-                    print(f"Traitement de l'image: {img_path}")
-                    page_text = image_to_text(img_path)
-                    print(f"Texte extrait de la page (longueur: {len(page_text)}): {page_text[:100]}...")
-                    if page_text:
-                        all_text.append(page_text)
-                
-                # Nettoyer les fichiers temporaires
-                for img_path in image_paths:
-                    if os.path.exists(img_path):
-                        os.remove(img_path)
-                
-                final_text = "\n".join(all_text)
-                print(f"Texte final du PDF scanné (longueur: {len(final_text)}): {final_text[:100]}...")
-                return final_text
-            return text
-        elif file_type == '.docx':
-            text = docx_to_text(file_path)
-            print(f"Texte extrait du DOCX (longueur: {len(text)}): {text[:100]}...")
-            return text
-        else:
-            raise ValueError(f"Type de fichier non supporté: {file_type}")
-    except Exception as e:
-        print(f"Erreur lors de l'extraction du texte: {str(e)}")
-        return ""
-    
-def display_pdf(file_path):
-    with open(file_path, "rb") as f:
-        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
-    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>'
-    st.markdown(pdf_display, unsafe_allow_html=True)
-
-def convert_docx_to_pdf(docx_path, output_dir="temp"):
-    pdf_path = Path(output_dir) / (Path(docx_path).stem + ".pdf")
-    try:
-        pypandoc.convert_file(str(docx_path), 'pdf', outputfile=str(pdf_path))
-        return str(pdf_path)
-    except Exception as e:
-        print(f"Erreur lors de la conversion DOCX → PDF : {e}")
-        return None
 
 # Barre latérale pour télécharger des fichiers
 with st.sidebar:
@@ -205,15 +132,6 @@ if doc1 and doc2 and compare_button:
                 st.metric("Longueur Document 1", f"{result['text1_length']} caractères")
                 st.metric("Longueur Document 2", f"{result['text2_length']} caractères")
         
-        # # Afficher les textes extraits
-        # with st.expander("Voir les textes extraits"):
-        #     col_text1, col_text2 = st.columns(2)
-        #     with col_text1:
-        #         st.subheader("Texte Document 1")
-        #         st.text_area("", text1, height=300, key="doc1_text_preview")
-        #     with col_text2:
-        #         st.subheader("Texte Document 2")
-        #         st.text_area("", text2, height=300, key="doc2_text_preview")
         
     except Exception as e:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
