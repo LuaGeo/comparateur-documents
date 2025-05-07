@@ -4,6 +4,10 @@ import os
 from pathlib import Path
 from PIL import Image
 import io
+import base64
+import pypandoc
+
+
 
 # Ajoutez le répertoire racine au chemin d'accès pour importer les modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -80,6 +84,21 @@ def extract_text_from_file(file_path, file_type):
     except Exception as e:
         print(f"Erreur lors de l'extraction du texte: {str(e)}")
         return ""
+    
+def display_pdf(file_path):
+    with open(file_path, "rb") as f:
+        base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+    pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>'
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+def convert_docx_to_pdf(docx_path, output_dir="temp"):
+    pdf_path = Path(output_dir) / (Path(docx_path).stem + ".pdf")
+    try:
+        pypandoc.convert_file(str(docx_path), 'pdf', outputfile=str(pdf_path))
+        return str(pdf_path)
+    except Exception as e:
+        print(f"Erreur lors de la conversion DOCX → PDF : {e}")
+        return None
 
 # Barre latérale pour télécharger des fichiers
 with st.sidebar:
@@ -152,18 +171,27 @@ if doc1 and doc2 and compare_button:
                 img1 = Image.open(io.BytesIO(doc1.getvalue()))
                 img1 = rotate_image_to_portrait(img1)
                 st.image(img1, use_container_width=True)
+            elif file_type1 == '.pdf':
+                display_pdf(str(doc1_path))
+            elif file_type1 == '.docx':
+                st.text_area("Aperçu du document Word", text1, height=600, key="docx_preview_1")
             else:
-                st.write(f"Type de fichier: {file_type1}")
-        
+                st.warning(f"Format non pris en charge : {file_type1}")
+
         with col2:
             st.subheader("Document 2")
             if file_type2 in ['.jpg', '.jpeg', '.png']:
                 img2 = Image.open(io.BytesIO(doc2.getvalue()))
                 img2 = rotate_image_to_portrait(img2)
                 st.image(img2, use_container_width=True)
+            elif file_type2 == '.pdf':
+                display_pdf(str(doc2_path))
+            elif file_type2 == '.docx':
+                st.text_area("Aperçu du document Word", text2, height=600, key="docx_preview_2")
             else:
-                st.write(f"Type de fichier: {file_type2}")
-        
+                st.warning(f"Format non pris en charge : {file_type2}")
+
+
         # Métriques de comparaison dans un conteneur séparé
         with st.container():
             st.subheader("Métriques de Comparaison")
@@ -177,15 +205,15 @@ if doc1 and doc2 and compare_button:
                 st.metric("Longueur Document 1", f"{result['text1_length']} caractères")
                 st.metric("Longueur Document 2", f"{result['text2_length']} caractères")
         
-        # Afficher les textes extraits
-        with st.expander("Voir les textes extraits"):
-            col_text1, col_text2 = st.columns(2)
-            with col_text1:
-                st.subheader("Texte Document 1")
-                st.text_area("", text1, height=300)
-            with col_text2:
-                st.subheader("Texte Document 2")
-                st.text_area("", text2, height=300)
+        # # Afficher les textes extraits
+        # with st.expander("Voir les textes extraits"):
+        #     col_text1, col_text2 = st.columns(2)
+        #     with col_text1:
+        #         st.subheader("Texte Document 1")
+        #         st.text_area("", text1, height=300, key="doc1_text_preview")
+        #     with col_text2:
+        #         st.subheader("Texte Document 2")
+        #         st.text_area("", text2, height=300, key="doc2_text_preview")
         
     except Exception as e:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
