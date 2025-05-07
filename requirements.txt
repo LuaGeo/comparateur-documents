@@ -30,5 +30,5 @@ torch>=2.0.1  # Note: Vérifier la compatibilité avec Python 3.13
 # python-Levenshtein>=0.25.0
 
 opencv-python==4.9.0.80
-Pillow==10.2.0
+Pillow==10.3.0
 numpy==1.26.4
