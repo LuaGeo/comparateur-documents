@@ -1,8 +1,12 @@
 import streamlit as st
 import sys
+import os
 from pathlib import Path
 from PIL import Image
 import io
+import base64
+import pypandoc
+
 
 
 # Ajoutez le répertoire racine au chemin d'accès pour importer les modules
