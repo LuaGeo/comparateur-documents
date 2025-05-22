@@ -17,7 +17,9 @@ from src.preprocessing.document_utils import (
     rotate_image_to_portrait,
     display_pdf,
     convert_docx_to_pdf,
-    generate_diff_html
+    generate_diff_html,
+    count_pages,
+    segment_text_by_topics
 )
 
 st.set_page_config(
@@ -61,7 +63,7 @@ if doc1 and doc2 and compare_button:
         f.write(doc2.getbuffer())
     
     try:
-        # Extraire le texte des documents
+        # Extraire o texto dos documentos
         file_type1 = Path(doc1.name).suffix.lower()
         file_type2 = Path(doc2.name).suffix.lower()
         
@@ -78,7 +80,15 @@ if doc1 and doc2 and compare_button:
         if not text2:
             raise ValueError(f"Le document 2 n'a pas pu être lu (type: {file_type2})")
         
-        # Calculer les métriques de comparaison
+        # Contar páginas
+        pages1 = count_pages(str(doc1_path), file_type1)
+        pages2 = count_pages(str(doc2_path), file_type2)
+        
+        # Segmentar textos em tópicos
+        topics1 = segment_text_by_topics(text1)
+        topics2 = segment_text_by_topics(text2)
+        
+        # Calcular métricas de comparação
         from Levenshtein import distance
         lev_distance = distance(text1, text2)
         max_len = max(len(text1), len(text2))
@@ -88,7 +98,11 @@ if doc1 and doc2 and compare_button:
             'distance': lev_distance,
             'similarity': similarity,
             'text1_length': len(text1),
-            'text2_length': len(text2)
+            'text2_length': len(text2),
+            'pages1': pages1,
+            'pages2': pages2,
+            'topics1': topics1,
+            'topics2': topics2
         }
         
         # Afficher les résultats
@@ -99,6 +113,7 @@ if doc1 and doc2 and compare_button:
         
         with col1:
             st.subheader("Document 1")
+            st.metric("Nombre de pages", pages1)
             if file_type1 in ['.jpg', '.jpeg', '.png']:
                 img1 = Image.open(io.BytesIO(doc1.getvalue()))
                 img1 = rotate_image_to_portrait(img1)
@@ -112,6 +127,7 @@ if doc1 and doc2 and compare_button:
 
         with col2:
             st.subheader("Document 2")
+            st.metric("Nombre de pages", pages2)
             if file_type2 in ['.jpg', '.jpeg', '.png']:
                 img2 = Image.open(io.BytesIO(doc2.getvalue()))
                 img2 = rotate_image_to_portrait(img2)
@@ -123,10 +139,9 @@ if doc1 and doc2 and compare_button:
             else:
                 st.warning(f"Format non pris en charge : {file_type2}")
 
-
-        # Métriques de comparaison dans un conteneur séparé
+        # Métricas de comparação em um container separado
         with st.container():
-            st.subheader("Métriques de Comparaison")
+            st.subheader("Metriques de comparaison")
             col_metrics1, col_metrics2 = st.columns(2)
             
             with col_metrics1:
@@ -134,8 +149,31 @@ if doc1 and doc2 and compare_button:
                 st.metric("Distance de Levenshtein", result['distance'])
             
             with col_metrics2:
-                st.metric("Longueur Document 1", f"{result['text1_length']} caractères")
-                st.metric("Longueur Document 2", f"{result['text2_length']} caractères")
+                st.metric("Taille du Document 1", f"{result['text1_length']} caracteres")
+                st.metric("Taille du Document 2", f"{result['text2_length']} caracteres")
+            
+            # Comparação por tópicos
+            st.subheader("Comparaison par section")
+            
+            # Encontrar tópicos comuns
+            common_topics = set(topics1.keys()) & set(topics2.keys())
+            
+            if common_topics:
+                for topic in sorted(common_topics):
+                    with st.expander(f"Section {topic}"):
+                        col_t1, col_t2 = st.columns(2)
+                        with col_t1:
+                            st.text_area("Document 1", topics1[topic], height=200, key=f"topic1_{topic}")
+                        with col_t2:
+                            st.text_area("Document 2", topics2[topic], height=200, key=f"topic2_{topic}")
+                        
+                        # Calcular similaridade para este tópico
+                        topic_lev = distance(topics1[topic], topics2[topic])
+                        topic_max_len = max(len(topics1[topic]), len(topics2[topic]))
+                        topic_similarity = 1 - (topic_lev / topic_max_len) if topic_max_len > 0 else 0
+                        st.metric(f"Similarité de Section {topic}", f"{topic_similarity:.2%}")
+            else:
+                st.warning("Pas de section commune entre les documents.")
             
             with st.expander("🧠 Différences détaillées"):
                 diff_html = generate_diff_html(text1, text2)

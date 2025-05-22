@@ -3,6 +3,8 @@ import base64
 from pathlib import Path
 import streamlit as st
 import pypandoc
+import PyPDF2
+from docx import Document
 
 from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
@@ -89,3 +91,56 @@ def convert_docx_to_pdf(docx_path, output_dir="temp"):
     except Exception as e:
         print(f"Erreur lors de la conversion DOCX → PDF : {e}")
         return None
+
+def count_pages(file_path, file_type):
+    """Compte le nombre de pages d'un document"""
+    try:
+        if file_type in ['.jpg', '.jpeg', '.png']:
+            return 1
+        elif file_type == '.pdf':
+            with open(file_path, "rb") as file:
+                reader = PyPDF2.PdfReader(file)
+                return len(reader.pages)
+        elif file_type == '.docx':
+            doc = Document(file_path)
+            # Estimation basée sur le nombre de ruptures de section
+            return len(doc.sections)
+        else:
+            raise ValueError(f"Type de fichier non supporté: {file_type}")
+    except Exception as e:
+        print(f"Erreur lors de la comptage des pages: {str(e)}")
+        return 0
+
+def segment_text_by_topics(text):
+    """Segmente le texte en sections en fonction de modèles de numérotation"""
+    import re
+    
+    # Modèle pour identifier les sections (ex: 1., 1.1., 2., etc)
+    topic_pattern = r'^\s*(\d+(?:\.\d+)*\.?)\s+(.+)$'
+    
+    # Diviser le texte en lignes
+    lines = text.split('\n')
+    
+    # Dictionnaire pour stocker les sections
+    topics = {}
+    current_topic = None
+    current_content = []
+    
+    for line in lines:
+        match = re.match(topic_pattern, line)
+        if match:
+            # Si nous avons une section actuel, la sauvegarder
+            if current_topic:
+                topics[current_topic] = '\n'.join(current_content)
+            
+            # Commencer un nouveau sujet
+            current_topic = match.group(1)
+            current_content = [match.group(2)]
+        elif current_topic:
+            current_content.append(line)
+    
+    # Ajouter la dernière section
+    if current_topic:
+        topics[current_topic] = '\n'.join(current_content)
+    
+    return topics
