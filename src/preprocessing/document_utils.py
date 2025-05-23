@@ -5,6 +5,9 @@ import streamlit as st
 import pypandoc
 import PyPDF2
 from docx import Document
+from docx2pdf import convert
+import pdfplumber
+import re
 
 from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
@@ -83,13 +86,14 @@ def display_pdf(file_path):
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 def convert_docx_to_pdf(docx_path, output_dir="temp"):
-    """Convertit un fichier DOCX en PDF avec Pandoc"""
-    pdf_path = Path(output_dir) / (Path(docx_path).stem + ".pdf")
+    output_path = Path(output_dir)
+    output_path.mkdir(exist_ok=True)
     try:
-        pypandoc.convert_file(str(docx_path), 'pdf', outputfile=str(pdf_path))
+        convert(str(docx_path), str(output_path))
+        pdf_path = output_path / (Path(docx_path).stem + ".pdf")
         return str(pdf_path)
     except Exception as e:
-        print(f"Erreur lors de la conversion DOCX → PDF : {e}")
+        print(f"Erreur lors de la conversion DOCX → PDF avec docx2pdf: {e}")
         return None
 
 def count_pages(file_path, file_type):
@@ -116,7 +120,9 @@ def segment_text_by_topics(text):
     import re
     
     # Modèle pour identifier les sections (ex: 1., 1.1., 2., etc)
-    topic_pattern = r'^\s*(\d+(?:\.\d+)*\.?)\s+(.+)$'
+    # topic_pattern = r'^\s*(\d+(?:\.\d+)*\.?)\s+(.+)$'
+    topic_pattern = r'^\s*(\d+(?:\.\d+)*)(?:\.)?\s+(.+)$'
+
     
     # Diviser le texte en lignes
     lines = text.split('\n')
@@ -127,6 +133,7 @@ def segment_text_by_topics(text):
     current_content = []
     
     for line in lines:
+        print(f"[LIGNE] {line}")  # pour vérifier chaque ligne
         match = re.match(topic_pattern, line)
         if match:
             # Si nous avons une section actuel, la sauvegarder
@@ -144,3 +151,44 @@ def segment_text_by_topics(text):
         topics[current_topic] = '\n'.join(current_content)
     
     return topics
+
+
+
+def detect_section_headings_by_layout(pdf_path, min_font_size=12):
+    """ Ouvre un PDF avec pdfplumber. 
+        Pour chaque page, lit chaque caractère.
+        Si c'est un chiffre isolé avec une grande taille, on le considère comme candidat section.
+        Retourne une liste triée par taille décroissante (les chiffres les plus gros d’abord)"""
+    
+    section_candidates = []
+    section_pattern = re.compile(r'^(Article\s+)?\d+(\.\d+)*\.?\s')
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page_num, page in enumerate(pdf.pages):
+            lines = {}
+            for char in page.chars:
+                line_key = round(char["top"])  # Regrouper les caractères par ligne
+                lines.setdefault(line_key, []).append(char)
+
+            for top, chars in lines.items():
+                # Trier les caractères de la ligne par position horizontale
+                sorted_chars = sorted(chars, key=lambda c: c["x0"])
+                full_text = "".join(c["text"] for c in sorted_chars).strip()
+
+                # Vérifie si la ligne commence par un motif de section (ex: "1.2 Introduction")
+                if section_pattern.match(full_text):
+                    # Vérifie la taille de police des premiers caractères numériques uniquement
+                    first_numeric_chars = [c for c in sorted_chars if c["text"].isdigit() or c["text"] == '.']
+                    if first_numeric_chars:
+                        avg_size = sum(c["size"] for c in first_numeric_chars) / len(first_numeric_chars)
+                        if avg_size >= min_font_size:
+                            section_candidates.append({
+                                "page": page_num + 1,
+                                "text": full_text,
+                                "font_size": round(avg_size, 2),
+                                "top": top,
+                                "left": sorted_chars[0]["x0"]
+                            })
+
+    return sorted(section_candidates, key=lambda x: (x["page"], x["top"]))
+

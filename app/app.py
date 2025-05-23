@@ -1,12 +1,11 @@
 import streamlit as st
 import sys
-import os
 from pathlib import Path
 from PIL import Image
 import io
-import base64
-import pypandoc
-
+# import os
+# import base64
+# import pypandoc
 
 
 # Ajoutez le répertoire racine au chemin d'accès pour importer les modules
@@ -19,7 +18,8 @@ from src.preprocessing.document_utils import (
     convert_docx_to_pdf,
     generate_diff_html,
     count_pages,
-    segment_text_by_topics
+    segment_text_by_topics,
+    detect_section_headings_by_layout
 )
 
 st.set_page_config(
@@ -85,8 +85,18 @@ if doc1 and doc2 and compare_button:
         pages2 = count_pages(str(doc2_path), file_type2)
         
         # Segmentar textos em tópicos
-        topics1 = segment_text_by_topics(text1)
-        topics2 = segment_text_by_topics(text2)
+        # topics1 = segment_text_by_topics(text1)
+        # topics2 = segment_text_by_topics(text2)
+        if file_type1 == ".pdf":
+            topics1 = {f"{i+1}.": sec["text"] for i, sec in enumerate(detect_section_headings_by_layout(str(doc1_path)))}
+        else:
+            topics1 = segment_text_by_topics(text1)
+
+        if file_type2 == ".pdf":
+            topics2 = {f"{i+1}.": sec["text"] for i, sec in enumerate(detect_section_headings_by_layout(str(doc2_path)))}
+        else:
+            topics2 = segment_text_by_topics(text2)
+
         
         # Calcular métricas de comparação
         from Levenshtein import distance
@@ -159,7 +169,11 @@ if doc1 and doc2 and compare_button:
             common_topics = set(topics1.keys()) & set(topics2.keys())
             
             if common_topics:
-                for topic in sorted(common_topics):
+                def sort_key(topic):
+                    # Extraire les entiers de '1.', '2.1.', '10.2'
+                    return [int(part) for part in topic.strip('.').split('.') if part.isdigit()]
+
+                for topic in sorted(common_topics, key=sort_key):
                     with st.expander(f"Section {topic}"):
                         col_t1, col_t2 = st.columns(2)
                         with col_t1:
