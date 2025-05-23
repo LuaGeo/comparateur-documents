@@ -15,7 +15,7 @@ from src.preprocessing.document_utils import (
     extract_text_from_file,
     rotate_image_to_portrait,
     display_pdf,
-    convert_docx_to_pdf,
+    # convert_docx_to_pdf,
     generate_diff_html,
     count_pages,
     segment_text_by_topics,

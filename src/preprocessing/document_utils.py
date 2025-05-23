@@ -85,16 +85,16 @@ def display_pdf(file_path):
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
-def convert_docx_to_pdf(docx_path, output_dir="temp"):
-    output_path = Path(output_dir)
-    output_path.mkdir(exist_ok=True)
-    try:
-        convert(str(docx_path), str(output_path))
-        pdf_path = output_path / (Path(docx_path).stem + ".pdf")
-        return str(pdf_path)
-    except Exception as e:
-        print(f"Erreur lors de la conversion DOCX → PDF avec docx2pdf: {e}")
-        return None
+# def convert_docx_to_pdf(docx_path, output_dir="temp"):
+#     output_path = Path(output_dir)
+#     output_path.mkdir(exist_ok=True)
+#     try:
+#         convert(str(docx_path), str(output_path))
+#         pdf_path = output_path / (Path(docx_path).stem + ".pdf")
+#         return str(pdf_path)
+#     except Exception as e:
+#         print(f"Erreur lors de la conversion DOCX → PDF avec docx2pdf: {e}")
+#         return None
 
 def count_pages(file_path, file_type):
     """Compte le nombre de pages d'un document"""
@@ -158,7 +158,7 @@ def detect_section_headings_by_layout(pdf_path, min_font_size=12):
     """ Ouvre un PDF avec pdfplumber. 
         Pour chaque page, lit chaque caractère.
         Si c'est un chiffre isolé avec une grande taille, on le considère comme candidat section.
-        Retourne une liste triée par taille décroissante (les chiffres les plus gros d’abord)"""
+        Retourne une liste triée par taille décroissante (les chiffres les plus gros d'abord)"""
     
     section_candidates = []
     section_pattern = re.compile(r'^(Article\s+)?\d+(\.\d+)*\.?\s')
