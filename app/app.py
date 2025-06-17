@@ -1,25 +1,23 @@
 import streamlit as st
 import sys
-import os
 from pathlib import Path
 from PIL import Image
 import io
-import base64
-import pypandoc
-
-
 
 # Ajoutez le répertoire racine au chemin d'accès pour importer les modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.preprocessing.segment_with_llm import segment_text_with_llm
 from src.preprocessing.document_utils import (
     extract_text_from_file,
     rotate_image_to_portrait,
     display_pdf,
-    convert_docx_to_pdf,
-    generate_diff_html,
+    #generate_diff_html,
     count_pages,
-    segment_text_by_topics
+    segment_text_by_topics,
+    analyze_text_structure,
+    extract_typo_blocks,
+    highlight_diff_html
 )
 
 st.set_page_config(
@@ -46,9 +44,15 @@ with st.sidebar:
     
     # Bouton pour lancer la comparaison
     compare_button = st.button("Comparer les Documents")
+    if compare_button and (not doc1 or not doc2):
+        st.warning("❗ Merci de recharger les deux documents avant de lancer la comparaison.")
+        st.stop()
 
 # Champ principal pour les résultats
 if doc1 and doc2 and compare_button:
+    if doc1 is None or doc2 is None:
+        st.warning("Fichiers manquants. Veuillez les recharger dans la barre latérale.")
+        st.stop()
     # Créer un répertoire temporaire si ce n'est pas déjà fait
     temp_dir = Path("temp")
     temp_dir.mkdir(exist_ok=True)
@@ -106,7 +110,7 @@ if doc1 and doc2 and compare_button:
         }
         
         # Afficher les résultats
-        st.header("Résultats de la Comparaison")
+        
         
         # Configurer le layout pour une meilleure visualisation en portrait
         col1, col2 = st.columns(2)
@@ -152,42 +156,63 @@ if doc1 and doc2 and compare_button:
                 st.metric("Taille du Document 1", f"{result['text1_length']} caracteres")
                 st.metric("Taille du Document 2", f"{result['text2_length']} caracteres")
             
-            # Comparação por tópicos
-            st.subheader("Comparaison par section")
             
-            # Encontrar tópicos comuns
-            common_topics = set(topics1.keys()) & set(topics2.keys())
-            
-            if common_topics:
-                for topic in sorted(common_topics):
-                    with st.expander(f"Section {topic}"):
-                        col_t1, col_t2 = st.columns(2)
-                        with col_t1:
-                            st.text_area("Document 1", topics1[topic], height=200, key=f"topic1_{topic}")
-                        with col_t2:
-                            st.text_area("Document 2", topics2[topic], height=200, key=f"topic2_{topic}")
-                        
-                        # Calcular similaridade para este tópico
-                        topic_lev = distance(topics1[topic], topics2[topic])
-                        topic_max_len = max(len(topics1[topic]), len(topics2[topic]))
-                        topic_similarity = 1 - (topic_lev / topic_max_len) if topic_max_len > 0 else 0
-                        st.metric(f"Similarité de Section {topic}", f"{topic_similarity:.2%}")
-            else:
-                st.warning("Pas de section commune entre les documents.")
-            
-            with st.expander("🧠 Différences détaillées"):
-                diff_html = generate_diff_html(text1, text2)
-                st.markdown(diff_html, unsafe_allow_html=True)
+            st.header("Résultats de la Comparaison")
+
+        if file_type1 == '.pdf':
+            st.subheader("Structure typographique du Document 1")
+            try:
+                structure1 = analyze_text_structure(str(doc1_path))
+                for niveau, infos in structure1.items():
+                    st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
+                    for ex in infos["exemples"]:
+                        st.markdown(f"- _{ex}_")
+            except Exception as e:
+                st.warning(f"Erreur d'analyse typographique du document 1 : {e}")
+
+            if file_type2 == '.pdf':
+                st.subheader("Structure typographique du Document 2")
+                try:
+                    structure2 = analyze_text_structure(str(doc2_path))
+                    for niveau, infos in structure2.items():
+                        st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
+                        for ex in infos["exemples"]:
+                            st.markdown(f"- _{ex}_")
+                except Exception as e:
+                    st.warning(f"Erreur d'analyse typographique du document 2 : {e}")
+
+            # with st.expander("🧠 Différences détaillées"):
+            #     diff_html = generate_diff_html(text1, text2)
+            #     st.markdown(diff_html, unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
     
-    finally:
-        # Nettoyer les fichiers temporaires
-        if doc1_path.exists():
-            doc1_path.unlink()
-        if doc2_path.exists():
-            doc2_path.unlink()
+    # finally:
+    #     # Nettoyer les fichiers temporaires
+    #     if doc1_path.exists():
+    #         doc1_path.unlink()
+    #     if doc2_path.exists():
+    #         doc2_path.unlink()
+
+        # Extraire blocs des deux documents
+    blocks1 = extract_typo_blocks(str(doc1_path))
+    blocks2 = extract_typo_blocks(str(doc2_path))
+
+    # Segmentation sémantique via GPT
+    sections1 = segment_text_with_llm(blocks1)
+    sections2 = segment_text_with_llm(blocks2)
+
+    # Associer les titres communs pour comparaison
+    common_titles = {s["titre"] for s in sections1} & {s["titre"] for s in sections2}
+
+    for title in sorted(common_titles):
+        text1 = next(s["contenu"] for s in sections1 if s["titre"] == title)
+        text2 = next(s["contenu"] for s in sections2 if s["titre"] == title)
+        
+        st.markdown(f"### 🔎 Section : {title}")
+        html_diff = highlight_diff_html(text1, text2)
+        st.markdown(html_diff, unsafe_allow_html=True)
 
 
 

@@ -1,5 +1,5 @@
 # Environnements
-venv/
+.venv/
 .env
 
 # Fichiers générés
@@ -14,3 +14,4 @@ temp/
 # Fichiers sensibles
 secrets.ini
 *.key
+confidential/

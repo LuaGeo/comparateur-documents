@@ -4,7 +4,10 @@ from pathlib import Path
 import streamlit as st
 import pypandoc
 import PyPDF2
+import difflib
 from docx import Document
+import fitz  # PyMuPDF
+from collections import defaultdict
 
 from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
@@ -12,11 +15,11 @@ from src.preprocessing.pdf_to_image import pdf_to_images
 
 from difflib import HtmlDiff
 
-def generate_diff_html(text1: str, text2: str) -> str:
-    lines1 = text1.splitlines()
-    lines2 = text2.splitlines()
-    diff = HtmlDiff().make_table(lines1, lines2, fromdesc="Document 1", todesc="Document 2")
-    return diff
+# def generate_diff_html(text1: str, text2: str) -> str:
+#     lines1 = text1.splitlines()
+#     lines2 = text2.splitlines()
+#     diff = HtmlDiff().make_table(lines1, lines2, fromdesc="Document 1", todesc="Document 2")
+#     return diff
 
 
 def rotate_image_to_portrait(image):
@@ -144,3 +147,87 @@ def segment_text_by_topics(text):
         topics[current_topic] = '\n'.join(current_content)
     
     return topics
+
+
+
+
+def analyze_text_structure(pdf_path):
+    doc = fitz.open(pdf_path)
+    size_stats = defaultdict(list)
+
+    for page in doc:
+        for block in page.get_text("dict")["blocks"]:
+            for line in block.get("lines", []):
+                for span in line["spans"]:
+                    size = round(span["size"], 1)
+                    text = span["text"].strip()
+                    if text:
+                        size_stats[size].append(text)
+
+    # Trie les tailles de police décroissantes (hiérarchie)
+    distribution = sorted(size_stats.items(), key=lambda x: -x[0])
+
+    # Classement hiérarchique
+    hierarchy = {}
+    for i, (size, texts) in enumerate(distribution):
+        if i == 0:
+            label = "Grand titre"
+        elif i == 1:
+            label = "Titre"
+        elif i == 2:
+            label = "Sous-titre"
+        else:
+            label = f"Paragraphe niveau {i - 2}"
+        hierarchy[label] = {
+            "taille_px": size,
+            "occurrences": len(texts),
+            "exemples": texts[:5]
+        }
+
+    return hierarchy
+
+
+def extract_typo_blocks(pdf_path):
+    """
+    Extrait les blocs de texte d’un PDF avec leur taille de police et leur position.
+    Retourne une liste de dicts : [{text, size, page}, ...]
+    """
+    import fitz  # PyMuPDF
+    blocks = []
+
+    doc = fitz.open(pdf_path)
+    for page_number, page in enumerate(doc, start=1):
+        for block in page.get_text("dict")["blocks"]:
+            for line in block.get("lines", []):
+                for span in line["spans"]:
+                    text = span.get("text", "").strip()
+                    if text:
+                        blocks.append({
+                            "text": text,
+                            "size": round(span["size"], 1),
+                            "page": page_number
+                        })
+    return blocks
+
+
+def highlight_diff_html(text1, text2):
+    """
+    Retourne un HTML où :
+    - les suppressions (text1) sont en rouge barré,
+    - les ajouts (text2) en vert souligné,
+    - les modifications sont surlignées.
+    """
+    d = difflib.ndiff(text1.split(), text2.split())
+    result = []
+
+    for token in d:
+        if token.startswith("- "):  # supprimé
+            result.append(f"<span style='color:red;text-decoration:line-through;'>{token[2:]}</span>")
+        elif token.startswith("+ "):  # ajouté
+            result.append(f"<span style='color:green;text-decoration:underline;'>{token[2:]}</span>")
+        elif token.startswith("? "):  # aide (non utilisée ici)
+            continue
+        else:
+            result.append(token[2:])
+
+    return "<p>" + " ".join(result) + "</p>"
