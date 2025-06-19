@@ -15,10 +15,10 @@ from src.preprocessing.document_utils import (
     #generate_diff_html,
     count_pages,
     segment_text_by_topics,
-    analyze_text_structure,
-    extract_typo_blocks,
-    extract_paragraph_blocks,
-    highlight_diff_html
+    #analyze_text_structure,
+    #extract_typo_blocks,
+    extract_paragraph_blocks
+    #highlight_diff_html
 
 )
 
@@ -157,7 +157,7 @@ if doc1 and doc2 and compare_button:
             with col_metrics2:
                 st.metric("Taille du Document 1", f"{result['text1_length']} caracteres")
                 st.metric("Taille du Document 2", f"{result['text2_length']} caracteres")
-            
+
             
         #     st.header("Résultats de la Comparaison")
 
@@ -190,6 +190,7 @@ if doc1 and doc2 and compare_button:
     except Exception as e:
         st.error(f"Erreur lors de la comparaison: {str(e)}")
     
+
     # finally:
     #     # Nettoyer les fichiers temporaires
     #     if doc1_path.exists():
@@ -197,8 +198,8 @@ if doc1 and doc2 and compare_button:
     #     if doc2_path.exists():
     #         doc2_path.unlink()
 
-        # Extraire blocs des deux documents
-    blocks1 = extract_paragraph_blocks(str(doc1_path))
+        # Extraire blocs des deux documents (ancien approche)
+    """blocks1 = extract_paragraph_blocks(str(doc1_path))
     blocks2 = extract_paragraph_blocks(str(doc2_path))
 
     with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 1"):
@@ -210,8 +211,138 @@ if doc1 and doc2 and compare_button:
     with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 2"):
         for i, block in enumerate(blocks2):
             st.markdown(f"Bloc #{i+1} (page {block['page']})")
+            st.code(block['text'], language='markdown')"""
+
+###################################################################    
+###### Extraire blocs des deux documents (NOUVEL approche): #######
+###################################################################
+
+    blocks1 = extract_paragraph_blocks(str(doc1_path))
+    blocks2 = extract_paragraph_blocks(str(doc2_path))
+
+    # # Afficher les statistiques
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     st.metric("📄 Document 1", f"{len(blocks1)} blocs")
+    # with col2:
+    #     st.metric("📄 Document 2", f"{len(blocks2)} blocs")
+
+    # # Fonction utilitaire pour l'affichage avec style
+    # def display_block_with_style(block, block_num):
+    #     """Affiche un bloc avec un style selon son type"""
+        
+    #     # Définir les couleurs et icônes selon le type
+    #     type_config = {
+    #         "titre": {"color": "blue", "icon": "🏷️", "bg": "#e6f3ff"},
+    #         "paragraphe": {"color": "black", "icon": "📝", "bg": "#f9f9f9"},
+    #         "liste": {"color": "green", "icon": "📋", "bg": "#f0fff4"},
+    #         "citation": {"color": "purple", "icon": "💬", "bg": "#faf0ff"}
+    #     }
+        
+    #     config = type_config.get(block.get('type', 'paragraphe'), type_config['paragraphe'])
+        
+    #     # Conteneur avec style personnalisé
+    #     with st.container():
+    #         # En-tête du bloc
+    #         col1, col2, col3 = st.columns([0.5, 2, 1])
+    #         with col1:
+    #             st.write(f"{config['icon']}")
+    #         with col2:
+    #             st.markdown(f"**Bloc #{block_num}** - {block.get('type', 'paragraphe').title()}")
+    #         with col3:
+    #             st.caption(f"Page {block['page']}")
+            
+    #         # Contenu du bloc avec style conditionnel
+    #         if block.get('type') == 'titre':
+    #             st.markdown(f"### {block['text']}")
+    #         else:
+    #             # Utiliser un conteneur avec background coloré
+    #             st.markdown(f"""
+    #             <div style="background-color: {config['bg']}; padding: 10px; border-radius: 5px; margin: 5px 0;">
+    #                 {block['text']}
+    #             </div>
+    #             """, unsafe_allow_html=True)
+            
+    #         # Informations supplémentaires pour DOCX
+    #         if 'style' in block:
+    #             st.caption(f"Style: {block['style']}")
+
+    # # Visualisation du Document 1
+    # with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 1"):
+    #     # Filtres optionnels
+    #     col1, col2 = st.columns(2)
+    #     with col1:
+    #         show_types1 = st.multiselect(
+    #             "Filtrer par type:", 
+    #             options=list(set(block.get('type', 'paragraphe') for block in blocks1)),
+    #             default=list(set(block.get('type', 'paragraphe') for block in blocks1)),
+    #             key="filter1"
+    #         )
+    #     with col2:
+    #         show_pages1 = st.multiselect(
+    #             "Filtrer par page:", 
+    #             options=sorted(list(set(block['page'] for block in blocks1))),
+    #             default=sorted(list(set(block['page'] for block in blocks1))),
+    #             key="pages1"
+    #         )
+        
+    #     # Filtrer les blocs
+    #     filtered_blocks1 = [
+    #         block for block in blocks1 
+    #         if block.get('type', 'paragraphe') in show_types1 and block['page'] in show_pages1
+    #     ]
+        
+    #     st.info(f"Affichage de {len(filtered_blocks1)} blocs sur {len(blocks1)} total")
+        
+    #     for i, block in enumerate(filtered_blocks1):
+    #         display_block_with_style(block, i+1)
+    #         if i < len(filtered_blocks1) - 1:  # Pas de séparateur après le dernier
+    #             st.divider()
+
+    # # Visualisation du Document 2
+    # with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 2"):
+    #     # Filtres optionnels
+    #     col1, col2 = st.columns(2)
+    #     with col1:
+    #         show_types2 = st.multiselect(
+    #             "Filtrer par type:", 
+    #             options=list(set(block.get('type', 'paragraphe') for block in blocks2)),
+    #             default=list(set(block.get('type', 'paragraphe') for block in blocks2)),
+    #             key="filter2"
+    #         )
+    #     with col2:
+    #         show_pages2 = st.multiselect(
+    #             "Filtrer par page:", 
+    #             options=sorted(list(set(block['page'] for block in blocks2))),
+    #             default=sorted(list(set(block['page'] for block in blocks2))),
+    #             key="pages2"
+    #         )
+        
+    #     # Filtrer les blocs
+    #     filtered_blocks2 = [
+    #         block for block in blocks2 
+    #         if block.get('type', 'paragraphe') in show_types2 and block['page'] in show_pages2
+    #     ]
+        
+    #     st.info(f"Affichage de {len(filtered_blocks2)} blocs sur {len(blocks2)} total")
+        
+    #     for i, block in enumerate(filtered_blocks2):
+    #         display_block_with_style(block, i+1)
+    #         if i < len(filtered_blocks2) - 1:
+    #             st.divider()
+
+    with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 1"):
+        for i, block in enumerate(blocks1):
+            # Ajout du type dans l'affichage
+            type_emoji = {"titre": "🏷️", "liste": "📋", "citation": "💬"}.get(block.get('type'), "📝")
+            st.markdown(f"{type_emoji} **Bloc #{i+1}** (page {block['page']}) - *{block.get('type', 'paragraphe')}*")
             st.code(block['text'], language='markdown')
 
+    with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 2"):
+        for i, block in enumerate(blocks2):
+            type_emoji = {"titre": "🏷️", "liste": "📋", "citation": "💬"}.get(block.get('type'), "📝")
+            st.markdown(f"{type_emoji} **Bloc #{i+1}** (page {block['page']}) - *{block.get('type', 'paragraphe')}*")
+            st.code(block['text'], language='markdown')
 
 
     # Segmentation sémantique via GPT
@@ -233,8 +364,10 @@ if doc1 and doc2 and compare_button:
     #     html_diff = highlight_diff_html(text1, text2)
     #     st.markdown(html_diff, unsafe_allow_html=True)
 
-
-
 elif compare_button and (not doc1 or not doc2):
     st.warning("Veuillez uploader les deux documents avant de lancer la comparaison.") 
+
+
+
+
 
