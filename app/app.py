@@ -17,7 +17,9 @@ from src.preprocessing.document_utils import (
     segment_text_by_topics,
     analyze_text_structure,
     extract_typo_blocks,
+    extract_paragraph_blocks,
     highlight_diff_html
+
 )
 
 st.set_page_config(
@@ -157,29 +159,29 @@ if doc1 and doc2 and compare_button:
                 st.metric("Taille du Document 2", f"{result['text2_length']} caracteres")
             
             
-            st.header("Résultats de la Comparaison")
+        #     st.header("Résultats de la Comparaison")
 
-        if file_type1 == '.pdf':
-            st.subheader("Structure typographique du Document 1")
-            try:
-                structure1 = analyze_text_structure(str(doc1_path))
-                for niveau, infos in structure1.items():
-                    st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
-                    for ex in infos["exemples"]:
-                        st.markdown(f"- _{ex}_")
-            except Exception as e:
-                st.warning(f"Erreur d'analyse typographique du document 1 : {e}")
+        # if file_type1 == '.pdf':
+        #     st.subheader("Structure typographique du Document 1")
+        #     try:
+        #         structure1 = analyze_text_structure(str(doc1_path))
+        #         for niveau, infos in structure1.items():
+        #             st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
+        #             for ex in infos["exemples"]:
+        #                 st.markdown(f"- _{ex}_")
+        #     except Exception as e:
+        #         st.warning(f"Erreur d'analyse typographique du document 1 : {e}")
 
-            if file_type2 == '.pdf':
-                st.subheader("Structure typographique du Document 2")
-                try:
-                    structure2 = analyze_text_structure(str(doc2_path))
-                    for niveau, infos in structure2.items():
-                        st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
-                        for ex in infos["exemples"]:
-                            st.markdown(f"- _{ex}_")
-                except Exception as e:
-                    st.warning(f"Erreur d'analyse typographique du document 2 : {e}")
+        #     if file_type2 == '.pdf':
+        #         st.subheader("Structure typographique du Document 2")
+        #         try:
+        #             structure2 = analyze_text_structure(str(doc2_path))
+        #             for niveau, infos in structure2.items():
+        #                 st.markdown(f"**{niveau}** — taille : {infos['taille_px']} px — {infos['occurrences']} occurrences")
+        #                 for ex in infos["exemples"]:
+        #                     st.markdown(f"- _{ex}_")
+        #         except Exception as e:
+        #             st.warning(f"Erreur d'analyse typographique du document 2 : {e}")
 
             # with st.expander("🧠 Différences détaillées"):
             #     diff_html = generate_diff_html(text1, text2)
@@ -196,23 +198,40 @@ if doc1 and doc2 and compare_button:
     #         doc2_path.unlink()
 
         # Extraire blocs des deux documents
-    blocks1 = extract_typo_blocks(str(doc1_path))
-    blocks2 = extract_typo_blocks(str(doc2_path))
+    blocks1 = extract_paragraph_blocks(str(doc1_path))
+    blocks2 = extract_paragraph_blocks(str(doc2_path))
+
+    with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 1"):
+        for i, block in enumerate(blocks1):
+            st.markdown(f"Bloc #{i+1} (page {block['page']})")
+            st.code(block['text'], language='markdown')
+
+
+    with st.expander("🔍 Visualiser les blocs typographiques extraits du Document 2"):
+        for i, block in enumerate(blocks2):
+            st.markdown(f"Bloc #{i+1} (page {block['page']})")
+            st.code(block['text'], language='markdown')
+
+
 
     # Segmentation sémantique via GPT
-    sections1 = segment_text_with_llm(blocks1)
-    sections2 = segment_text_with_llm(blocks2)
+    # sections1 = segment_text_with_llm(blocks1)
+    # sections2 = segment_text_with_llm(blocks2)
 
-    # Associer les titres communs pour comparaison
-    common_titles = {s["titre"] for s in sections1} & {s["titre"] for s in sections2}
+    # st.write("sections1 =", sections1)
+    # st.write("sections2 =", sections2)
+    # st.write("type(sections1[0]) =", type(sections1[0]))
 
-    for title in sorted(common_titles):
-        text1 = next(s["contenu"] for s in sections1 if s["titre"] == title)
-        text2 = next(s["contenu"] for s in sections2 if s["titre"] == title)
+    # # Associer les titres communs pour comparaison
+    # common_titles = {s["titre"] for s in sections1} & {s["titre"] for s in sections2}
+
+    # for title in sorted(common_titles):
+    #     text1 = next(s["contenu"] for s in sections1 if s["titre"] == title)
+    #     text2 = next(s["contenu"] for s in sections2 if s["titre"] == title)
         
-        st.markdown(f"### 🔎 Section : {title}")
-        html_diff = highlight_diff_html(text1, text2)
-        st.markdown(html_diff, unsafe_allow_html=True)
+    #     st.markdown(f"### 🔎 Section : {title}")
+    #     html_diff = highlight_diff_html(text1, text2)
+    #     st.markdown(html_diff, unsafe_allow_html=True)
 
 
 

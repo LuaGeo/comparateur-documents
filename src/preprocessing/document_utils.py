@@ -5,9 +5,11 @@ import streamlit as st
 import pypandoc
 import PyPDF2
 import difflib
+import docx
 from docx import Document
 import fitz  # PyMuPDF
 from collections import defaultdict
+import re
 
 from src.preprocessing.text_extract import docx_to_text, pdf_to_text
 from src.preprocessing.scan_text_extract import image_to_text
@@ -210,24 +212,188 @@ def extract_typo_blocks(pdf_path):
     return blocks
 
 
-def highlight_diff_html(text1, text2):
-    """
-    Retourne un HTML où :
-    - les suppressions (text1) sont en rouge barré,
-    - les ajouts (text2) en vert souligné,
-    - les modifications sont surlignées.
-    """
-    d = difflib.ndiff(text1.split(), text2.split())
-    result = []
+# def extract_paragraph_blocks(pdf_path, min_length=5):
+#     """
+#     Extrait le texte d’un PDF et le segmente en paragraphes, robustement.
+#     Retourne une liste de dicts : [{text, page, index}]
+#     """
+#     import fitz  # PyMuPDF
+#     blocks = []
+#     doc = fitz.open(pdf_path)
+#     for page_number, page in enumerate(doc, start=1):
+#         text = page.get_text("text")
+#         lines = text.splitlines()
+#         paragraph = []
+#         para_index = 1
+#         for line in lines:
+#             if line.strip() == "":
+#                 # Fin de paragraphe
+#                 if paragraph:
+#                     para_text = " ".join(paragraph).strip()
+#                     if len(para_text) >= min_length:
+#                         blocks.append({
+#                             "text": para_text,
+#                             "page": page_number,
+#                             "index": para_index
+#                         })
+#                         para_index += 1
+#                     paragraph = []
+#             else:
+#                 paragraph.append(line.strip())
+#         # Dernier paragraphe s'il y en a un
+#         if paragraph:
+#             para_text = " ".join(paragraph).strip()
+#             if len(para_text) >= min_length:
+#                 blocks.append({
+#                     "text": para_text,
+#                     "page": page_number,
+#                     "index": para_index
+#                 })
+#     return blocks
 
-    for token in d:
-        if token.startswith("- "):  # supprimé
-            result.append(f"<span style='color:red;text-decoration:line-through;'>{token[2:]}</span>")
-        elif token.startswith("+ "):  # ajouté
-            result.append(f"<span style='color:green;text-decoration:underline;'>{token[2:]}</span>")
-        elif token.startswith("? "):  # aide (non utilisée ici)
-            continue
+
+
+
+
+# def highlight_diff_html(text1, text2):
+#     """
+#     Retourne un HTML où :
+#     - les suppressions (text1) sont en rouge barré,
+#     - les ajouts (text2) en vert souligné,
+#     - les modifications sont surlignées.
+#     """
+#     d = difflib.ndiff(text1.split(), text2.split())
+#     result = []
+
+#     for token in d:
+#         if token.startswith("- "):  # supprimé
+#             result.append(f"<span style='color:red;text-decoration:line-through;'>{token[2:]}</span>")
+#         elif token.startswith("+ "):  # ajouté
+#             result.append(f"<span style='color:green;text-decoration:underline;'>{token[2:]}</span>")
+#         elif token.startswith("? "):  # aide (non utilisée ici)
+#             continue
+#         else:
+#             result.append(token[2:])
+
+#     return "<p>" + " ".join(result) + "</p>"
+
+
+
+##### AUTRE APPROCHE POUR EXTRAIRE LES BLOCS DE TEXTE:
+
+def extract_paragraph_blocks(file_path, min_length=5):
+    """
+    Extrait le texte d'un PDF ou DOCX et le segmente en paragraphes robustement.
+    Retourne une liste de dicts : [{text, page, index, type}]
+    """
+    file_path = Path(file_path)
+    
+    if file_path.suffix.lower() == '.pdf':
+        return extract_pdf_paragraphs(file_path, min_length)
+    elif file_path.suffix.lower() in ['.docx', '.doc']:
+        return extract_docx_paragraphs(file_path, min_length)
+    else:
+        raise ValueError(f"Format de fichier non supporté: {file_path.suffix}")
+
+def extract_pdf_paragraphs(pdf_path, min_length=5):
+    """Extraction spécialisée pour PDF avec multiple techniques"""
+    blocks = []
+    doc = fitz.open(pdf_path)
+    
+    for page_number, page in enumerate(doc, start=1):
+        # Méthode 1: Utiliser les blocs de texte PyMuPDF
+        text_blocks = page.get_text("dict")["blocks"]
+        
+        para_index = 1
+        for block in text_blocks:
+            if "lines" in block:  # Bloc de texte
+                # Extraire le texte de chaque bloc
+                block_text = ""
+                for line in block["lines"]:
+                    for span in line["spans"]:
+                        block_text += span["text"] + " "
+                
+                block_text = block_text.strip()
+                if len(block_text) >= min_length:
+                    # Diviser le bloc en paragraphes potentiels
+                    paragraphs = split_text_into_paragraphs(block_text)
+                    
+                    for para_text in paragraphs:
+                        if len(para_text.strip()) >= min_length:
+                            blocks.append({
+                                "text": para_text.strip(),
+                                "page": page_number,
+                                "index": para_index,
+                                # "type": classify_text_type(para_text.strip())
+                            })
+                            para_index += 1
+    
+    doc.close()
+    return blocks
+
+def extract_docx_paragraphs(docx_path, min_length=5):
+    """Extraction spécialisée pour DOCX"""
+    blocks = []
+    doc = Document(docx_path)
+    
+    para_index = 1
+    current_page = 1  # Approximation pour DOCX
+    
+    for paragraph in doc.paragraphs:
+        text = paragraph.text.strip()
+        if len(text) >= min_length:
+            blocks.append({
+                "text": text,
+                "page": current_page,
+                "index": para_index,
+                # "type": classify_text_type(text),
+                "style": paragraph.style.name if paragraph.style else "Normal"
+            })
+            para_index += 1
+    
+    return blocks
+
+
+def split_text_into_paragraphs(text):
+    """
+    Divise un texte en paragraphes en utilisant plusieurs heuristiques
+    """
+    # Nettoyer le texte
+    text = re.sub(r'\s+', ' ', text)  # Normaliser les espaces
+    
+    # Méthode 1: Diviser sur les doubles retours à la ligne
+    paragraphs = re.split(r'\n\s*\n', text)
+    
+    # Si pas de division claire, utiliser d'autres heuristiques
+    if len(paragraphs) == 1:
+        # Méthode 2: Diviser sur les fins de phrase suivies d'espaces multiples
+        paragraphs = re.split(r'(?<=[.!?])\s{2,}(?=[A-ZÀ-Ý])', text)
+    
+    # Si toujours pas de division, essayer les retours à la ligne simples
+    if len(paragraphs) == 1:
+        # Méthode 3: Diviser sur retours à la ligne + majuscule
+        paragraphs = re.split(r'\n(?=[A-ZÀ-Ý])', text)
+    
+    # Méthode 4: Si le texte est très long, diviser par taille
+    final_paragraphs = []
+    for para in paragraphs:
+        para = para.strip()
+        if len(para) > 1000:  # Paragraphe très long, le diviser
+            sentences = re.split(r'(?<=[.!?])\s+', para)
+            current_chunk = ""
+            for sentence in sentences:
+                if len(current_chunk + sentence) < 500:
+                    current_chunk += sentence + " "
+                else:
+                    if current_chunk:
+                        final_paragraphs.append(current_chunk.strip())
+                    current_chunk = sentence + " "
+            if current_chunk:
+                final_paragraphs.append(current_chunk.strip())
         else:
-            result.append(token[2:])
+            if para:
+                final_paragraphs.append(para)
+    
+    return final_paragraphs
 
-    return "<p>" + " ".join(result) + "</p>"
+

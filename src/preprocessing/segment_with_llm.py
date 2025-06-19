@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 
-openai_api_key = os.environ.get("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
-def segment_text_with_llm(blocks: list[dict], model_name="gpt-4o"):
+def segment_text_with_llm(blocks: list[dict], model_name="gpt-4o mini"):
     """
     Utilise un modèle LLM pour segmenter les blocs typographiques en sections logiques.
     blocks: list de dicts comme [{"text": ..., "size": ..., "page": ...}, ...]
